@@ -1,0 +1,16 @@
+{
+    "name": "insomnia-plugin-oci-auth",
+    "version": "0.0.1",
+    "private": false,
+    "insomnia": {
+        "name": "oci-auth",
+        "description": "Authenticate requests to Oracle Cloud Infrastructure REST APIs.",
+        "publisher": {
+            "name": "Scott Harwell"
+        }
+    },
+    "main": "main.js",
+    "dependencies": {
+        "jsrsasign": "^10.4.0"
+    }
+}
