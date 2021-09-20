@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import jsrsasign from 'jsrsasign';
 
 let dateHeaderValue: string | undefined = undefined;
