@@ -1,7 +1,7 @@
-const fs = require('fs');
-const jsrsasign = require('jsrsasign');
+import * as fs from 'fs';
+import jsrsasign from 'jsrsasign';
 
-let dateHeaderValue = undefined;
+let dateHeaderValue: string | undefined = undefined;
 
 // Creates a token tag with the required parameters for OCI API token creation.
 const tokenTag = {
@@ -40,18 +40,18 @@ const tokenTag = {
             placeholder: '/Users/scott/.oci/my_key.pem'
         }
     ],
-    async run (context, apiVer, tenancyId, userId, keyFingerprint, privKeyPath) {
+    async run (context: any, apiVer: string, tenancyId: string, userId: string, keyFingerprint: string, privKeyPath: string) {
         // console.log('[oci-auth-provider]', 'get oci_bearer_token')
         // console.log('[oci-auth-provider]', apiVer)
         // console.log('[oci-auth-provider]', tenancyId)
         // console.log('[oci-auth-provider]', userId)
         // console.log('[oci-auth-provider]', keyFingerprint)
         // console.log('[oci-auth-provider]', privKeyPath)
-        console.log('[oci-auth-provider]', context);
+        // console.log('[oci-auth-provider]', context);
 
         const privKey = fs.readFileSync(privKeyPath, 'utf-8');
 
-        const { meta } = context;
+        const { meta }: any = context;
 
         if (!meta.requestId || !meta.workspaceId) {
             return null;
@@ -92,7 +92,7 @@ const tokenTag = {
         });
 
         // if x-date and date are included, then drop the date header
-        if (request.headers.find((element, index) => {
+        if (request.headers.find((element: any, index: number) => {
             return element.name.toLowerCase() === 'x-date' && !element.disabled;
         })) {
             headersToSign[ 0 ] = "x-date";
@@ -140,7 +140,7 @@ const tokenTag = {
                     break;
                 default:
                     console.log(`[oci-auth-provider] Attept to get header ${header}`);
-                    const headerObj = request.headers.find((element, index) => {
+                    const headerObj = request.headers.find((element: any, index: number) => {
                         return element.name.toLowerCase() === header.toLowerCase() && !element.disabled;
                     });
                     console.log(headerObj)
@@ -155,7 +155,8 @@ const tokenTag = {
         }
 
         // initialize
-        const sig = new jsrsasign.crypto.Signature({ "alg": "SHA256withRSA", "prov": "cryptojs/jsrsa" });
+        
+        const sig = new jsrsasign.KJUR.crypto.Signature({ "alg": "SHA256withRSA" });
         // initialize for signature validation
         const key = jsrsasign.KEYUTIL.getKey(privKey);
         sig.init(key);
@@ -176,7 +177,7 @@ const tokenTag = {
 };
 
 // Sets the date header on request to match the calculated value in the token tag.
-const requestHook = async function (context) {
+const requestHook = async function (context: any) {
     const dateHeader = await context.request.getHeader('date');
     const xDateHeader = await context.request.getHeader('x-date');
 

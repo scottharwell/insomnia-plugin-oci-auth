@@ -9,8 +9,18 @@
             "name": "Scott Harwell"
         }
     },
-    "main": "src/main.js",
+    "main": "./src/main.js",
+    "files": ["src"],
+    "scripts": {
+      "build": "rm -rf build/ && tsc",
+      "test": "exit 0"
+    },
     "dependencies": {
         "jsrsasign": "^10.4.0"
+    },
+    "devDependencies": {
+        "@types/jsrsasign": "^8.0.13",
+        "@types/node": "^16.9.4",
+        "typescript": "^4.4.3"
     }
 }
