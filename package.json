@@ -9,7 +9,7 @@
             "name": "Scott Harwell"
         }
     },
-    "main": "main.js",
+    "main": "src/main.js",
     "dependencies": {
         "jsrsasign": "^10.4.0"
     }
