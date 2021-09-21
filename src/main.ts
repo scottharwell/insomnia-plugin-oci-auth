@@ -1,14 +1,18 @@
 import fs from 'fs';
 import jsrsasign from 'jsrsasign';
 
-let dateHeaderValue: string | undefined = undefined;
+let apiVer: string | undefined;
+let tenancyId: string | undefined;
+let userId: string | undefined;
+let keyFingerprint: string | undefined;
+let privKeyPath: string | undefined;
 
 // Creates a token tag with the required parameters for OCI API token creation.
 const tokenTag = {
-    name: 'oci_bearer_token',
-    displayName: 'OCI Auth Token',
-    description: 'Generate a bearer token for OCI authentication requests',
-    disablePreview: true,
+    name: 'oci_auth_signature',
+    displayName: 'OCI Auth Signature',
+    description: 'Generate a signature for OCI authentication requests',
+    disablePreview: () => { return false },
     args: [
         {
             displayName: 'API Version',
@@ -41,31 +45,50 @@ const tokenTag = {
             placeholder: '/Users/scott/.oci/my_key.pem'
         }
     ],
-    async run(context: any, apiVer: string, tenancyId: string, userId: string, keyFingerprint: string, privKeyPath: string) {
-        // console.log('[oci-auth-provider]', 'get oci_bearer_token')
-        // console.log('[oci-auth-provider]', apiVer)
-        // console.log('[oci-auth-provider]', tenancyId)
-        // console.log('[oci-auth-provider]', userId)
-        // console.log('[oci-auth-provider]', keyFingerprint)
-        // console.log('[oci-auth-provider]', privKeyPath)
-        console.log('[oci-auth-provider]', context);
+    async run(context: any, ...args: any[]) {
+        console.log(context);
+        console.log(args);
 
-        const privKey = fs.readFileSync(privKeyPath, 'utf-8');
+        apiVer = args[0];
+        tenancyId = args[1];
+        userId = args[2];
+        keyFingerprint = args[3];
+        privKeyPath = args[4];
 
-        const { meta }: any = context;
+        return "Value calculated when request is run.";
+    }
+};
 
-        if (!meta.requestId || !meta.workspaceId) {
-            return null;
+// Sets the date header on request to match the calculated value in the token tag.
+const requestHook = async function (context: any) {
+    const signature = await calculateSignature(context.request);
+    context.request.setHeader('Authorization', signature);
+};
+
+const calculateSignature = function (request: any): Promise<string> {
+    return new Promise(async (resolve, reject) => {
+        if (!apiVer) {
+            reject("API version not set");
+        }
+        if (!tenancyId) {
+            reject("Tenancy ID not set");
+        }
+        if (!userId) {
+            reject("User ID not set");
+        }
+        if (!keyFingerprint) {
+            reject("Public key fingerprint not set");
+        }
+        if (!privKeyPath) {
+            reject("Private key path not set");
         }
 
-        const request = await context.util.models.request.getById(meta.requestId);
-        console.log(request);
+        const url = await request.getUrl();
+        const hostname = url.replace(/(http|https)\:\/\/([a-zA-Z0-9\.\-_]+)\/.*/gi, "$2");
+        const urlPath = url.replace(/(http|https)\:\/\/[a-zA-Z0-9\.\-_]+/gi, "");
+        const method = await request.getMethod();
+        const body = await request.getBody();
 
-        const workspace = await context.util.models.workspace.getById(meta.workspaceId);
-        console.log(workspace);
-
-        const method = request.method;
-        let body = request.body;
         let headersToSign = [
             "date",
             "(request-target)",
@@ -81,23 +104,23 @@ const tokenTag = {
             ]);
         }
 
-        const hostname = request.url.replace(/(http|https)\:\/\/([a-zA-Z0-9\.\-_]+)\/.*/gi, "$2");
-        const urlPath = request.url.replace(/(http|https)\:\/\/[a-zA-Z0-9\.\-_]+/gi, "");
+        console.log(`[oci-auth-signature] hostname: ${hostname}`);
+        console.log(`[oci-auth-signature] urlPath: ${urlPath}`);
 
-        console.log(`[oci-auth-provider] hostname: ${hostname}`);
-        console.log(`[oci-auth-provider] urlPath: ${urlPath}`);
+        const dateHeader = await request.getHeader('date');
+        const xDateHeader = await request.getHeader('x-date');
 
-        // Set the date header to current time
-        const now = new Date();
-        dateHeaderValue = now.toUTCString();
-        request.headers.push({
-            name: 'date',
-            value: dateHeaderValue
-        });
+        if (!dateHeader && !xDateHeader) {
+            const now = new Date();
+            const utcDate = now.toUTCString();
+            console.log(`[oci-auth-signature] Setting date header to value: ${utcDate}`);
+            await request.setHeader('date', utcDate);
+        }
 
         // if x-date and date are included, then drop the date header
-        if (request.headers.find((element: any, index: number) => {
-            return element.name.toLowerCase() === 'x-date' && !element.disabled;
+        const allHeaders = await request.getHeaders();
+        if (allHeaders.find((header: any) => {
+            return header.name.toLowerCase() === 'x-date';
         })) {
             headersToSign[0] = "x-date";
         }
@@ -115,24 +138,13 @@ const tokenTag = {
                 case "(request-target)":
                     let requestTarget = "(request-target): " + method.toLowerCase() + " " + urlPath;
 
-                    const parameters = request.parameters;
+                    const parameters = await request.getParameters();
 
                     if (parameters !== undefined && parameters.length > 0) {
                         let queryStr = "?";
                         let index = 0;
                         for (const param of parameters) {
-                            if (param.disabled) {
-                                continue;
-                            }
-
-                            let unencodedVal = param.value;
-
-                            // if the parameter is set by an env variable, then use that instead of the env placeholder
-                            if (context.context.hasOwnProperty(param.name)) {
-                                unencodedVal = context.context[param.name];
-                            }
-
-                            const val = encodeURIComponent(unencodedVal);
+                            const val = encodeURIComponent(param.value);
                             queryStr += index > 0 ? "&" : "";
                             queryStr += param.name + "=" + val;
                             index++;
@@ -141,35 +153,34 @@ const tokenTag = {
                         requestTarget += queryStr;
                     }
 
-                    console.log(`[oci-auth-provider] request-target: ${requestTarget}`);
+                    console.log(`[oci-auth-signature] request-target: ${requestTarget}`);
 
                     signingStr += requestTarget;
                     break;
                 case "content-length":
                     signingStr += header + ": " + body.length;
-                    console.log(`[oci-auth-provider] content-length: ${body.length}`);
+                    console.log(`[oci-auth-signature] content-length: ${body.length}`);
                     break;
                 case "host":
                     signingStr += header + ": " + hostname;
-                    console.log(`[oci-auth-provider] host: ${hostname}`);
+                    console.log(`[oci-auth-signature] host: ${hostname}`);
                     break;
                 default:
-                    console.log(`[oci-auth-provider] Attept to get header ${header}`);
-                    const headerObj = request.headers.find((element: any, index: number) => {
-                        return element.name.toLowerCase() === header.toLowerCase() && !element.disabled;
-                    });
-                    console.log(headerObj);
-                    if (headerObj && typeof (headerObj.value) === "string") {
-                        console.log(`[oci-auth-provider] Header ${headerObj.name}: ${headerObj.value}`);
-                        signingStr += headerObj.name + ": " + headerObj.value;
+                    console.log(`[oci-auth-signature] Attept to get header ${header}`);
+                    const headerVal = request.getHeader(header);
+                    if (headerVal) {
+                        console.log(`[oci-auth-signature] Header ${header}: ${headerVal}`);
+                        signingStr += header + ": " + headerVal;
                     } else {
-                        throw new Error("Required header has no value: " + header);
+                        reject("Required header has no value: " + header);
                     }
                     break;
             }
         }
 
-        // initialize
+        console.log(`[oci-auth-signature] Singing string:\n${signingStr}`)
+
+        const privKey = fs.readFileSync(privKeyPath!, 'utf-8');
 
         const sig = new jsrsasign.KJUR.crypto.Signature({ "alg": "SHA256withRSA" });
         // initialize for signature validation
@@ -187,19 +198,10 @@ const tokenTag = {
         // finish constructing the Authorization header with the signed signature
         const dynamicValue = `Signature version="${apiVer}",headers="${headersStr}",keyId="${apiKeyId}",algorithm="rsa-sha256",signature="${base64Sig}"`;
 
-        return dynamicValue;
-    }
-};
+        console.log(`[oci-auth-signature] Calculated signature:\n${dynamicValue}`)
 
-// Sets the date header on request to match the calculated value in the token tag.
-const requestHook = async function (context: any) {
-    const dateHeader = await context.request.getHeader('date');
-    const xDateHeader = await context.request.getHeader('x-date');
-
-    if (!dateHeader && !xDateHeader) {
-        console.log(`[oci-auth-provider] Setting date header to value: ${dateHeaderValue}`);
-        await context.request.setHeader('date', dateHeaderValue);
-    }
+        resolve(dynamicValue);
+    });
 };
 
 module.exports = {
@@ -207,4 +209,4 @@ module.exports = {
     requestHooks: [requestHook]
 };
 
-console.log('[oci-auth-provider]', 'plugin loaded');
+console.log('[oci-auth-signature]', 'plugin loaded');

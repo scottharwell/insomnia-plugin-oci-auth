@@ -3,9 +3,9 @@ extensions_dir=$(HOME)/Library/Application Support/Insomnia/plugins/
 
 build:
 	mkdir -p ./build/$(identifier)/node_modules
-	cp -r node_modules/* ./build/$(identifier)/node_modules
+	cp -r node_modules/jsrsasign ./build/$(identifier)/node_modules
 	cp README.md LICENSE package.json ./build/$(identifier)/
-	tsc --outDir ./build/$(identifier)
+	tsc
 
 clean:
 	rm -Rf ./build/

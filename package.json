@@ -9,7 +9,7 @@
             "name": "Scott Harwell"
         }
     },
-    "main": "./src/main.js",
+    "main": "src/main.js",
     "files": [
         "src"
     ],
