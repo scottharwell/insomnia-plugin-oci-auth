@@ -8,10 +8,11 @@ const tokenTag = {
     name: 'oci_bearer_token',
     displayName: 'OCI Auth Token',
     description: 'Generate a bearer token for OCI authentication requests',
+    disablePreview: true,
     args: [
         {
             displayName: 'API Version',
-            type: 'string',
+            type: 'enum',
             options: [
                 {
                     displayName: 'Version 1',
@@ -40,14 +41,14 @@ const tokenTag = {
             placeholder: '/Users/scott/.oci/my_key.pem'
         }
     ],
-    async run (context: any, apiVer: string, tenancyId: string, userId: string, keyFingerprint: string, privKeyPath: string) {
+    async run(context: any, apiVer: string, tenancyId: string, userId: string, keyFingerprint: string, privKeyPath: string) {
         // console.log('[oci-auth-provider]', 'get oci_bearer_token')
         // console.log('[oci-auth-provider]', apiVer)
         // console.log('[oci-auth-provider]', tenancyId)
         // console.log('[oci-auth-provider]', userId)
         // console.log('[oci-auth-provider]', keyFingerprint)
         // console.log('[oci-auth-provider]', privKeyPath)
-        // console.log('[oci-auth-provider]', context);
+        console.log('[oci-auth-provider]', context);
 
         const privKey = fs.readFileSync(privKeyPath, 'utf-8');
 
@@ -60,6 +61,9 @@ const tokenTag = {
         const request = await context.util.models.request.getById(meta.requestId);
         console.log(request);
 
+        const workspace = await context.util.models.workspace.getById(meta.workspaceId);
+        console.log(workspace);
+
         const method = request.method;
         let body = request.body;
         let headersToSign = [
@@ -68,7 +72,7 @@ const tokenTag = {
             "host"
         ];
 
-        const methodsThatRequireExtraHeaders = [ "POST", "PUT" ];
+        const methodsThatRequireExtraHeaders = ["POST", "PUT"];
         if (methodsThatRequireExtraHeaders.indexOf(method.toUpperCase()) !== -1) {
             headersToSign = headersToSign.concat([
                 "content-length",
@@ -95,7 +99,7 @@ const tokenTag = {
         if (request.headers.find((element: any, index: number) => {
             return element.name.toLowerCase() === 'x-date' && !element.disabled;
         })) {
-            headersToSign[ 0 ] = "x-date";
+            headersToSign[0] = "x-date";
         }
 
         const apiKeyId = `${tenancyId}/${userId}/${keyFingerprint}`;
@@ -111,24 +115,35 @@ const tokenTag = {
                 case "(request-target)":
                     let requestTarget = "(request-target): " + method.toLowerCase() + " " + urlPath;
 
-					const parameters = request.parameters;
+                    const parameters = request.parameters;
 
-					if (parameters !== undefined && parameters.length > 0) {
-						let queryStr = "?";
-						let index = 0;
-						for (const param of parameters) {
-							const val = encodeURIComponent(param.value);
-							queryStr += index > 0 ? "&" : "";
-							queryStr += param.name + "=" + val;
-							index++;
-						}
+                    if (parameters !== undefined && parameters.length > 0) {
+                        let queryStr = "?";
+                        let index = 0;
+                        for (const param of parameters) {
+                            if (param.disabled) {
+                                continue;
+                            }
 
-						requestTarget += queryStr;
-					}
+                            let unencodedVal = param.value;
+
+                            // if the parameter is set by an env variable, then use that instead of the env placeholder
+                            if (context.context.hasOwnProperty(param.name)) {
+                                unencodedVal = context.context[param.name];
+                            }
+
+                            const val = encodeURIComponent(unencodedVal);
+                            queryStr += index > 0 ? "&" : "";
+                            queryStr += param.name + "=" + val;
+                            index++;
+                        }
+
+                        requestTarget += queryStr;
+                    }
 
                     console.log(`[oci-auth-provider] request-target: ${requestTarget}`);
 
-					signingStr += requestTarget;
+                    signingStr += requestTarget;
                     break;
                 case "content-length":
                     signingStr += header + ": " + body.length;
@@ -143,7 +158,7 @@ const tokenTag = {
                     const headerObj = request.headers.find((element: any, index: number) => {
                         return element.name.toLowerCase() === header.toLowerCase() && !element.disabled;
                     });
-                    console.log(headerObj)
+                    console.log(headerObj);
                     if (headerObj && typeof (headerObj.value) === "string") {
                         console.log(`[oci-auth-provider] Header ${headerObj.name}: ${headerObj.value}`);
                         signingStr += headerObj.name + ": " + headerObj.value;
@@ -155,7 +170,7 @@ const tokenTag = {
         }
 
         // initialize
-        
+
         const sig = new jsrsasign.KJUR.crypto.Signature({ "alg": "SHA256withRSA" });
         // initialize for signature validation
         const key = jsrsasign.KEYUTIL.getKey(privKey);
@@ -181,15 +196,15 @@ const requestHook = async function (context: any) {
     const dateHeader = await context.request.getHeader('date');
     const xDateHeader = await context.request.getHeader('x-date');
 
-    if(!dateHeader && !xDateHeader) {
+    if (!dateHeader && !xDateHeader) {
         console.log(`[oci-auth-provider] Setting date header to value: ${dateHeaderValue}`);
         await context.request.setHeader('date', dateHeaderValue);
     }
 };
 
 module.exports = {
-    templateTags: [ tokenTag ],
-    requestHooks: [ requestHook ]
+    templateTags: [tokenTag],
+    requestHooks: [requestHook]
 };
 
 console.log('[oci-auth-provider]', 'plugin loaded');
