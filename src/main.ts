@@ -12,7 +12,7 @@ const tokenTag = {
     name: 'oci_auth_signature',
     displayName: 'OCI Auth Signature',
     description: 'Generate a signature for OCI authentication requests',
-    disablePreview: () => { return false },
+    disablePreview: () => { return false; },
     args: [
         {
             displayName: 'API Version',
@@ -61,8 +61,51 @@ const tokenTag = {
 
 // Sets the date header on request to match the calculated value in the token tag.
 const requestHook = async function (context: any) {
+    await setHeaders(context.request);
     const signature = await calculateSignature(context.request);
     context.request.setHeader('Authorization', signature);
+};
+
+// Sets the date, x-date, and x-content-sha256 headers of the request dynamically
+const setHeaders = function (request: any): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+        const method: string = await request.getMethod();
+        const dateHeader = await request.getHeader('date');
+        const xDateHeader = await request.getHeader('x-date');
+        const hasContentHeader = await request.hasHeader('content-type');
+
+        if (!hasContentHeader) {
+            console.log(`[oci-auth-signature] Setting content-type header`);
+            await request.setHeader('content-type', 'application/json');
+        }
+
+        if (!dateHeader && !xDateHeader) {
+            const now = new Date();
+            const utcDate = now.toUTCString();
+            console.log(`[oci-auth-signature] Setting date header to value: ${utcDate}`);
+            await request.setHeader('date', utcDate);
+        }
+
+        if (['POST', 'PATCH', 'PUT'].includes(method.toUpperCase())) {
+            const body = await request.getBody();
+            console.log(body);
+
+            // Set 'content-length' header
+            console.log(`[oci-auth-signature] Body length: ${body.text.length}`);
+            await request.setHeader('content-length', body.text.length);
+
+            // Create 'x-content-sha256' header
+            const md = new jsrsasign.KJUR.crypto.MessageDigest({ alg: 'sha256' });
+            const hash: any = md.digestString(body.text);
+            console.log(`[oci-auth-signature] Hash: ${hash}`);
+            const base64Hash = await jsrsasign.hextob64(hash)
+            console.log(`[oci-auth-signature] B64 Hash: ${base64Hash}`);
+
+            await request.setHeader('x-content-sha256', base64Hash);
+        }
+
+        resolve();
+    });
 };
 
 const calculateSignature = function (request: any): Promise<string> {
@@ -107,16 +150,6 @@ const calculateSignature = function (request: any): Promise<string> {
         console.log(`[oci-auth-signature] hostname: ${hostname}`);
         console.log(`[oci-auth-signature] urlPath: ${urlPath}`);
 
-        const dateHeader = await request.getHeader('date');
-        const xDateHeader = await request.getHeader('x-date');
-
-        if (!dateHeader && !xDateHeader) {
-            const now = new Date();
-            const utcDate = now.toUTCString();
-            console.log(`[oci-auth-signature] Setting date header to value: ${utcDate}`);
-            await request.setHeader('date', utcDate);
-        }
-
         // if x-date and date are included, then drop the date header
         const allHeaders = await request.getHeaders();
         if (allHeaders.find((header: any) => {
@@ -158,15 +191,15 @@ const calculateSignature = function (request: any): Promise<string> {
                     signingStr += requestTarget;
                     break;
                 case "content-length":
-                    signingStr += header + ": " + body.length;
-                    console.log(`[oci-auth-signature] content-length: ${body.length}`);
+                    signingStr += header + ": " + body.text.length;
+                    console.log(`[oci-auth-signature] content-length: ${body.text.length}`);
                     break;
                 case "host":
                     signingStr += header + ": " + hostname;
                     console.log(`[oci-auth-signature] host: ${hostname}`);
                     break;
                 default:
-                    console.log(`[oci-auth-signature] Attept to get header ${header}`);
+                    console.log(`[oci-auth-signature] Attempt to get header ${header}`);
                     const headerVal = request.getHeader(header);
                     if (headerVal) {
                         console.log(`[oci-auth-signature] Header ${header}: ${headerVal}`);
@@ -178,7 +211,7 @@ const calculateSignature = function (request: any): Promise<string> {
             }
         }
 
-        console.log(`[oci-auth-signature] Singing string:\n${signingStr}`)
+        console.log(`[oci-auth-signature] Singing string:\n${signingStr}`);
 
         const privKey = fs.readFileSync(privKeyPath!, 'utf-8');
 
@@ -198,7 +231,7 @@ const calculateSignature = function (request: any): Promise<string> {
         // finish constructing the Authorization header with the signed signature
         const dynamicValue = `Signature version="${apiVer}",headers="${headersStr}",keyId="${apiKeyId}",algorithm="rsa-sha256",signature="${base64Sig}"`;
 
-        console.log(`[oci-auth-signature] Calculated signature:\n${dynamicValue}`)
+        console.log(`[oci-auth-signature] Calculated signature:\n${dynamicValue}`);
 
         resolve(dynamicValue);
     });
