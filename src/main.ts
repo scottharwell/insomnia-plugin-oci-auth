@@ -12,7 +12,7 @@ const tokenTag = {
     name: 'oci_auth_signature',
     displayName: 'OCI Auth Signature',
     description: 'Generate a signature for OCI authentication requests',
-    disablePreview: () => { return false; },
+    disablePreview: () => { return true; },
     args: [
         {
             displayName: 'API Version',
