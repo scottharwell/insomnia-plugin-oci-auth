@@ -22,6 +22,11 @@ This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Conte
 
 ### Manual Installation
 
+1. Navigate to the plugins directory on your machine
+2. Clone this repository into the directory
+3. Run `npm install --production`
+4. In Insomnia's menu, click `Tools` > `Reload Plugins`
+
 ## Usage
 
 The plugin should always be used as a tag template for the `Authorization` header in a request to an OCI REST endpoint.  The plugin requires the same inputs as the OCI CLI or other tools that leverage OCI REST APIs.  You will only be able to make requests to endpoints that your user account has permissions to access.
