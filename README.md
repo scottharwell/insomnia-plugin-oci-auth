@@ -10,6 +10,8 @@ This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Conte
 
 ## Installation
 
+### Insomnia Plugin Manager
+
 1. Open Insomnia
 2. Open the application preferences
 3. Enter `insomnia-plugin-oci-auth` and click "install plugin"
@@ -17,6 +19,8 @@ This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Conte
 ![Plugin Installation](assets/../assets/img/install_plugin.jpg)
 
 4. Close the plugins dialog
+
+### Manual Installation
 
 ## Usage
 
