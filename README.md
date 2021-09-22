@@ -24,8 +24,9 @@ This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Conte
 
 1. Navigate to the plugins directory on your machine
 2. Clone this repository into the directory
-3. Run `npm install --production`
-4. In Insomnia's menu, click `Tools` > `Reload Plugins`
+3. Open the Makefile and update the `extensions_dir` variable with the path to the Insomnia extensions directory on your system.
+4. Run `make install` from your shell.
+5. In Insomnia's menu, click `Tools` > `Reload Plugins`
 
 ## Usage
 
@@ -50,7 +51,3 @@ You may set `date` or `x-date` headers within the request, but the extension wil
 ## Future Improvements
 
 - Add different language support for text output.
-
-# License
-
-MIT Copyright 2021 Scott Harwell
