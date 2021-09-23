@@ -1,0 +1,1 @@
+Keys in this folder are publicly accessible keys referenced in [documentation](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/signingrequests.htm). They should not be used in production or for anything other than validating signature compute expectations.

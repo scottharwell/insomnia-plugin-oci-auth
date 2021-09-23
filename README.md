@@ -51,3 +51,4 @@ You may set `date` or `x-date` headers within the request, but the extension wil
 ## Future Improvements
 
 - Add different language support for text output.
+- Properly type Insomnia objects.

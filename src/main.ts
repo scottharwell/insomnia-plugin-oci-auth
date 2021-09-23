@@ -12,7 +12,7 @@ const tokenTag = {
     name: 'oci_auth_signature',
     displayName: 'OCI Auth Signature',
     description: 'Generate a signature for OCI authentication requests',
-    disablePreview: () => { return true; },
+    disablePreview: () => { return false; },
     args: [
         {
             displayName: 'API Version',
@@ -46,8 +46,8 @@ const tokenTag = {
         }
     ],
     async run(context: any, ...args: any[]) {
-        console.log(context);
-        console.log(args);
+        //console.log(context);
+        //console.log(args);
 
         apiVer = args[0];
         tenancyId = args[1];
@@ -83,7 +83,7 @@ const setHeaders = function (request: any): Promise<void> {
             const now = new Date();
             const utcDate = now.toUTCString();
             console.log(`[oci-auth-signature] Setting date header to value: ${utcDate}`);
-            await request.setHeader('date', utcDate);
+            await request.setHeader('x-date', utcDate);
         }
 
         if (['POST', 'PATCH', 'PUT'].includes(method.toUpperCase())) {
@@ -91,8 +91,9 @@ const setHeaders = function (request: any): Promise<void> {
             console.log(body);
 
             // Set 'content-length' header
-            console.log(`[oci-auth-signature] Body length: ${body.text.length}`);
-            await request.setHeader('content-length', body.text.length);
+            const strLen = Buffer.byteLength(body.text, 'utf8');
+            console.log(`[oci-auth-signature] Body length: ${strLen}`);
+            await request.setHeader('content-length', strLen);
 
             // Create 'x-content-sha256' header
             const md = new jsrsasign.KJUR.crypto.MessageDigest({ alg: 'sha256' });
@@ -239,7 +240,11 @@ const calculateSignature = function (request: any): Promise<string> {
 
 module.exports = {
     templateTags: [tokenTag],
-    requestHooks: [requestHook]
+    requestHooks: [requestHook],
+    tokenTag: tokenTag,
+    setHeaders: setHeaders,
+    requestHook: requestHook,
+    calculateSignature: calculateSignature
 };
 
 console.log('[oci-auth-signature]', 'plugin loaded');
