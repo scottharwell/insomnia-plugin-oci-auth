@@ -1,4 +1,4 @@
-import * as signature from "../src/main";
+import * as InsomniaExtension from "../src/main";
 
 const testApiVer = "1";
 const testTenant = "ocid1.tenancy.oc1..test";
@@ -6,6 +6,21 @@ const testUser = "ocid1.user.oc1..test";
 const testKeySig = "73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7";
 const testKey = "./__tests__/assets/test_priv.key";
 const testDate = "Thu, 05 Jan 2014 21:31:40 GMT";
+
+describe("Test Object Prior to Values Set", () => {
+    let context: any = {
+        request: {}
+    };
+
+    test("extension preview is disabled", async () => {
+        const previewEnabled = InsomniaExtension.tokenTag.disablePreview();
+        expect(previewEnabled).toBeFalsy();
+    });
+
+    test("throws exception when parameter not set", async () => {
+        await expect(InsomniaExtension.calculateSignature(context.request)).rejects.toEqual("API version not set");
+    });
+});
 
 describe("Signature Calculations", () => {
     let context: any;
@@ -19,6 +34,7 @@ describe("Signature Calculations", () => {
                 text: ""
             },
             url: "https://iaas.us-ashburn-1.oraclecloud.com/20160918/vcns",
+            parameters: [],
 
             getMethod: () => {
                 return request.method;
@@ -74,7 +90,7 @@ describe("Signature Calculations", () => {
             request: request
         };
 
-        const runRes = await signature.tokenTag.run({}, testApiVer, testTenant, testUser, testKeySig, testKey);
+        const runRes = await InsomniaExtension.tokenTag.run({}, testApiVer, testTenant, testUser, testKeySig, testKey);
 
         expect(runRes).toBe("Value calculated when request is run.");
     });
@@ -83,7 +99,7 @@ describe("Signature Calculations", () => {
         const method = "GET";
         context.request.method = method;
         await context.request.setHeader('date', testDate);
-        await signature.setHeaders(context.request);
+        await InsomniaExtension.setHeaders(context.request);
 
         expect(context.request.getHeader('date')).toBe(testDate);
         expect(context.request.getMethod()).toBe(method);
@@ -93,7 +109,7 @@ describe("Signature Calculations", () => {
         const method = "GET";
         context.request.method = method;
         await context.request.setHeader('x-date', testDate);
-        await signature.setHeaders(context.request);
+        await InsomniaExtension.setHeaders(context.request);
 
         expect(context.request.getHeader('x-date')).toBe(testDate);
         expect(context.request.getMethod()).toBe(method);
@@ -102,7 +118,7 @@ describe("Signature Calculations", () => {
     test("it should set x-date header when no date variable is used", async () => {
         const method = "GET";
         context.request.method = method;
-        await signature.setHeaders(context.request);
+        await InsomniaExtension.setHeaders(context.request);
 
         expect(context.request.getHeader('x-date')).toBeDefined(); // Will be set to current date so only check for existence.
         expect(context.request.getMethod()).toBe(method);
@@ -112,7 +128,7 @@ describe("Signature Calculations", () => {
         const method = "POST";
         context.request.method = method;
         await context.request.setHeader('x-date', testDate);
-        await signature.setHeaders(context.request);
+        await InsomniaExtension.setHeaders(context.request);
 
         expect(context.request.getHeader('x-date')).toBe(testDate);
         expect(context.request.getMethod()).toBe(method);
@@ -122,7 +138,7 @@ describe("Signature Calculations", () => {
         const method = "PUT";
         context.request.method = method;
         await context.request.setHeader('x-date', testDate);
-        await signature.setHeaders(context.request);
+        await InsomniaExtension.setHeaders(context.request);
 
         expect(context.request.getHeader('x-date')).toBe(testDate);
         expect(context.request.getMethod()).toBe(method);
@@ -132,7 +148,7 @@ describe("Signature Calculations", () => {
         const method = "DELETE";
         context.request.method = method;
         await context.request.setHeader('x-date', testDate);
-        await signature.setHeaders(context.request);
+        await InsomniaExtension.setHeaders(context.request);
 
         expect(context.request.getHeader('x-date')).toBe(testDate);
         expect(context.request.getMethod()).toBe(method);
@@ -144,8 +160,21 @@ describe("Signature Calculations", () => {
 
         context.request.method = method;
         await context.request.setHeader('x-date', testDate);
-        await signature.setHeaders(context.request);
-        const calcultedSig = await signature.calculateSignature(context.request);
+        await InsomniaExtension.setHeaders(context.request);
+        const calcultedSig = await InsomniaExtension.calculateSignature(context.request);
+
+        expect(calcultedSig).toBe(expectedSignature);
+    });
+
+    test("it should calculate and return an expected signature string for GET with parameters in URL", async () => {
+        const method = "GET";
+        const expectedSignature = 'Signature version="1",headers="x-date (request-target) host",keyId="ocid1.tenancy.oc1..test/ocid1.user.oc1..test/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7",algorithm="rsa-sha256",signature="nsppktWAiV/Au1Alz2ndOL1WD1dBqa88ClSLJX5q/TghTMHyt5cGD9pGO5kw6lRimDnXs1NPqM+eG5ypkZGalXX08mIywMH7/xuQJJST0a01U45Zw5ED5OpJt5UWlm+Wwu1O93rBeXEYn3iYtiqdg0d9xQqtxFvvmFcHuU0KtnQ="';
+
+        context.request.method = method;
+        context.request.parameters.push({ name: 'param1', value: 'test' });
+        await context.request.setHeader('x-date', testDate);
+        await InsomniaExtension.setHeaders(context.request);
+        const calcultedSig = await InsomniaExtension.calculateSignature(context.request);
 
         expect(calcultedSig).toBe(expectedSignature);
     });
@@ -158,8 +187,8 @@ describe("Signature Calculations", () => {
         context.request.body.text = "\"{'val': '1', 'another': 2 }\"";
         await context.request.setHeader('x-date', testDate);
         await context.request.setHeader('Content-Type', 'application/json');
-        await signature.setHeaders(context.request);
-        const calcultedSig = await signature.calculateSignature(context.request);
+        await InsomniaExtension.setHeaders(context.request);
+        const calcultedSig = await InsomniaExtension.calculateSignature(context.request);
 
         expect(calcultedSig).toBe(expectedSignature);
     });
@@ -172,8 +201,8 @@ describe("Signature Calculations", () => {
         context.request.body.text = "\"{'val': '1', 'another': 2 }\"";
         await context.request.setHeader('x-date', testDate);
         await context.request.setHeader('Content-Type', 'application/json');
-        await signature.setHeaders(context.request);
-        const calcultedSig = await signature.calculateSignature(context.request);
+        await InsomniaExtension.setHeaders(context.request);
+        const calcultedSig = await InsomniaExtension.calculateSignature(context.request);
 
         expect(calcultedSig).toBe(expectedSignature);
     });
@@ -184,8 +213,8 @@ describe("Signature Calculations", () => {
 
         context.request.method = method;
         await context.request.setHeader('x-date', testDate);
-        await signature.setHeaders(context.request);
-        const calcultedSig = await signature.calculateSignature(context.request);
+        await InsomniaExtension.setHeaders(context.request);
+        const calcultedSig = await InsomniaExtension.calculateSignature(context.request);
 
         expect(calcultedSig).toBe(expectedSignature);
     });
@@ -193,6 +222,15 @@ describe("Signature Calculations", () => {
     test("it should call the requestHook method without error", async () => {
         const method = "GET";
         await context.request.setHeader('x-date', testDate);
-        await expect(signature.requestHook(context)).not.toThrowError;
+        await expect(InsomniaExtension.requestHook(context)).not.toThrowError;
+    });
+
+    test("throws exception when date and x-date are not set", async () => {
+        await expect(InsomniaExtension.calculateSignature(context.request)).rejects.toEqual("Required header has no value: date");
+    });
+
+    test("passes content-type header manually set", async () => {
+        context.request.headers.push({'name': 'content-type', 'value': 'application/json'})
+        await expect(InsomniaExtension.setHeaders(context.request)).resolves;
     });
 });
