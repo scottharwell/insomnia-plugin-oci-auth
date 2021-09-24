@@ -1,6 +1,6 @@
 # OCI Request Signature Insomnia Plugin
 
-[![CodeQL](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml)
+[![CodeQL](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml) [![CI](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/ci.yml)
 
 This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/signingrequests.htm) for the `Authorization` header in Oracle Cloud Infrastructure REST API requests.
 
