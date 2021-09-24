@@ -46,8 +46,8 @@ export const tokenTag = {
         }
     ],
     async run(context: any, ...args: any[]) {
-        //console.log(context);
-        //console.log(args);
+        //console.debug(context);
+        //console.debug(args);
 
         apiVer = args[0];
         tenancyId = args[1];
@@ -88,7 +88,7 @@ export const setHeaders = function (request: any): Promise<void> {
 
         if (['POST', 'PATCH', 'PUT'].includes(method.toUpperCase())) {
             const body = await request.getBody();
-            console.log(body);
+            //console.debug(body);
 
             // Set 'content-length' header
             const strLen = Buffer.byteLength(body.text, 'utf8');
@@ -98,7 +98,7 @@ export const setHeaders = function (request: any): Promise<void> {
             // Create 'x-content-sha256' header
             const md = new jsrsasign.KJUR.crypto.MessageDigest({ alg: 'sha256' });
             const hash: any = md.digestString(body.text);
-            console.log(`[oci-auth-signature] Hash: ${hash}`);
+            //console.debug(`[oci-auth-signature] Hash: ${hash}`);
             const base64Hash = await jsrsasign.hextob64(hash);
             console.log(`[oci-auth-signature] B64 Hash: ${base64Hash}`);
 
@@ -149,8 +149,8 @@ export const calculateSignature = function (request: any): Promise<string> {
                 ]);
             }
 
-            console.log(`[oci-auth-signature] hostname: ${hostname}`);
-            console.log(`[oci-auth-signature] urlPath: ${urlPath}`);
+            //console.debug(`[oci-auth-signature] hostname: ${hostname}`);
+            //console.debug(`[oci-auth-signature] urlPath: ${urlPath}`);
 
             // if x-date and date are included, then drop the date header
             const allHeaders = await request.getHeaders();
@@ -193,8 +193,9 @@ export const calculateSignature = function (request: any): Promise<string> {
                         signingStr += requestTarget;
                         break;
                     case "content-length":
-                        signingStr += header + ": " + Buffer.byteLength(body.text, 'utf8');
-                        console.log(`[oci-auth-signature] content-length: ${body.text.length}`);
+                        const length = Buffer.byteLength(body.text, 'utf8');
+                        signingStr += header + ": " + length;
+                        console.log(`[oci-auth-signature] content-length: ${length}`);
                         break;
                     case "host":
                         signingStr += header + ": " + hostname;
@@ -213,7 +214,7 @@ export const calculateSignature = function (request: any): Promise<string> {
                 }
             }
 
-            console.log(`[oci-auth-signature] Singing string:\n${signingStr}`);
+            console.log(`[oci-auth-signature] Signing string:\n${signingStr}`);
 
             const privKey = fs.readFileSync(privKeyPath!, 'utf-8');
 
