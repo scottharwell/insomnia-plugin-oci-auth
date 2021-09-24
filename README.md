@@ -1,6 +1,6 @@
 # OCI Request Signature Insomnia Plugin
 
-[![CodeQL](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml)
+[![CodeQL](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/codeql-analysis.yml) [![CI](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/scottharwell/insomnia-plugin-oci-auth/actions/workflows/ci.yml)
 
 This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/signingrequests.htm) for the `Authorization` header in Oracle Cloud Infrastructure REST API requests.
 
@@ -24,8 +24,9 @@ This plugin will [generate a signature](https://docs.oracle.com/en-us/iaas/Conte
 
 1. Navigate to the plugins directory on your machine
 2. Clone this repository into the directory
-3. Run `npm install --production`
-4. In Insomnia's menu, click `Tools` > `Reload Plugins`
+3. Open the Makefile and update the `extensions_dir` variable with the path to the Insomnia extensions directory on your system.
+4. Run `make install` from your shell.
+5. In Insomnia's menu, click `Tools` > `Reload Plugins`
 
 ## Usage
 
@@ -50,7 +51,4 @@ You may set `date` or `x-date` headers within the request, but the extension wil
 ## Future Improvements
 
 - Add different language support for text output.
-
-# License
-
-MIT Copyright 2021 Scott Harwell
+- Properly type Insomnia objects.
