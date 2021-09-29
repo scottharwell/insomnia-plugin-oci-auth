@@ -88,16 +88,17 @@ export const setHeaders = function (request: any): Promise<void> {
 
         if (['POST', 'PATCH', 'PUT'].includes(method.toUpperCase())) {
             const body = await request.getBody();
+            const bodyText = body.text ? body.text : "";
             //console.debug(body);
 
             // Set 'content-length' header
-            const strLen = Buffer.byteLength(body.text, 'utf8');
+            const strLen = Buffer.byteLength(bodyText, 'utf8');
             console.log(`[oci-auth-signature] Body length: ${strLen}`);
             await request.setHeader('content-length', strLen);
 
             // Create 'x-content-sha256' header
             const md = new jsrsasign.KJUR.crypto.MessageDigest({ alg: 'sha256' });
-            const hash: any = md.digestString(body.text);
+            const hash: any = md.digestString(bodyText);
             //console.debug(`[oci-auth-signature] Hash: ${hash}`);
             const base64Hash = await jsrsasign.hextob64(hash);
             console.log(`[oci-auth-signature] B64 Hash: ${base64Hash}`);
@@ -193,7 +194,8 @@ export const calculateSignature = function (request: any): Promise<string> {
                         signingStr += requestTarget;
                         break;
                     case "content-length":
-                        const length = Buffer.byteLength(body.text, 'utf8');
+                        const bodyText = body.text ? body.text : "";
+                        const length = Buffer.byteLength(bodyText, 'utf8');
                         signingStr += header + ": " + length;
                         console.log(`[oci-auth-signature] content-length: ${length}`);
                         break;
