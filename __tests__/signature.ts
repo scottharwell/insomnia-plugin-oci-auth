@@ -31,7 +31,7 @@ describe("Signature Calculations", () => {
             method: "",
             headers: [],
             body: {
-                text: ""
+                text: undefined
             },
             url: "https://iaas.us-ashburn-1.oraclecloud.com/20160918/vcns",
             parameters: [],
