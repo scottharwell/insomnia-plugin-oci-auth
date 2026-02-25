@@ -7,6 +7,8 @@ export let userId: string | undefined;
 export let keyFingerprint: string | undefined;
 export let privKeyPath: string | undefined;
 
+const methodsThatRequireExtraHeaders = ["POST", "PUT", "PATCH"];
+
 // Creates a token tag with the required parameters for OCI API token creation.
 export const tokenTag = {
     name: 'oci_auth_signature',
@@ -86,7 +88,7 @@ export const setHeaders = function (request: any): Promise<void> {
             await request.setHeader('x-date', utcDate);
         }
 
-        if (['POST', 'PATCH', 'PUT'].includes(method.toUpperCase())) {
+        if (methodsThatRequireExtraHeaders.includes(method.toUpperCase())) {
             const body = await request.getBody();
             const bodyText = body.text ? body.text : "";
             //console.debug(body);
@@ -141,7 +143,6 @@ export const calculateSignature = function (request: any): Promise<string> {
                 "host"
             ];
 
-            const methodsThatRequireExtraHeaders = ["POST", "PUT"];
             if (methodsThatRequireExtraHeaders.indexOf(method.toUpperCase()) !== -1) {
                 headersToSign = headersToSign.concat([
                     "content-length",
